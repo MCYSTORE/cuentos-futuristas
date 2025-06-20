@@ -1,6 +1,0 @@
-# Contenido para netlify.toml
-[build]
-  publish = "." # Le dice a Netlify que la web principal está en la raíz
-
-[functions]
-  directory = "netlify/functions/" # Le dice a Netlify dónde encontrar el backend
