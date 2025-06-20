@@ -60,35 +60,27 @@
             const [error, setError] = useState(null);
             const [nextTheme, setNextTheme] = useState('animals');
 
-            // --- CORRECTED API Functions to call Netlify Backend ---
+            // --- REVERTED API Functions to call Google directly (for local use) ---
             const generateText = async (prompt) => {
-                const response = await fetch('/.netlify/functions/generarCuento', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, type: 'text' })
-                });
-                if (!response.ok) throw new Error("Fallo al generar el texto.");
+                const apiKey = ""; // The environment will provide the key for this to work
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error (Text): ${response.statusText}`);
                 const result = await response.json();
-                // FIX: Correctly access the nested data from the serverless function response
-                if (result.data && result.data.candidates && result.data.candidates[0].content.parts[0].text) {
-                    return result.data.candidates[0].content.parts[0].text;
-                }
-                throw new Error("Respuesta inválida del servidor de texto.");
+                if (result.candidates && result.candidates[0].content.parts[0].text) return result.candidates[0].content.parts[0].text;
+                throw new Error("Invalid response from text API.");
             };
 
             const generateImage = async (prompt) => {
-                const response = await fetch('/.netlify/functions/generarCuento', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, type: 'image' })
-                });
-                if (!response.ok) throw new Error("Fallo al generar la imagen.");
+                const apiKey = ""; // The environment will provide the key for this to work
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                const payload = { instances: [{ prompt }], parameters: { "sampleCount": 1 } };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error (Image): ${response.statusText}`);
                 const result = await response.json();
-                // FIX: Correctly access the nested data from the serverless function response
-                if (result.data && result.data.predictions && result.data.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.data.predictions[0].bytesBase64Encoded}`;
-                }
-                return `https://placehold.co/600x400/f87171/ffffff?text=Error+de+Imagen`;
+                if (result.predictions && result.predictions[0].bytesBase64Encoded) return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                return `https://placehold.co/600x400/f87171/ffffff?text=Image+Error`;
             };
 
             const generateNewStory = async () => {
@@ -195,11 +187,8 @@
                         </div>
                     );
                     
-                    // FIX: Use createRoot for temporary rendering
                     const tempRoot = ReactDOM.createRoot(tempContainer);
-                    // Use a promise to wait for the async render to finish
                     await new Promise(resolve => {
-                         // We need to pass the element directly, not as JSX
                          tempRoot.render(React.createElement(pageElement.type, pageElement.props), resolve);
                     });
 
@@ -207,7 +196,6 @@
                     if (i > 0) pdf.addPage();
                     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
                     
-                    // Unmount and clean up
                     tempRoot.unmount();
                     document.body.removeChild(tempContainer);
                 }
